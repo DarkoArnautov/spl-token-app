@@ -27,6 +27,7 @@ import {
   createCreateMetadataAccountV3Instruction,
   PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
+import { useRouter } from "next/navigation";
 
 export default function TokenForm() {
   const { publicKey, sendTransaction, wallet } = useWallet();
@@ -42,10 +43,11 @@ export default function TokenForm() {
   const [isFreeze, setIsFreeze] = useState(false);
   const [isMint, setIsMint] = useState(false);
   const [isUpdate, setIsUpdate] = useState(false);
-
-  const deploy_gas_fee = 0.0001;
-  const authority_gas_fee = 0.001;
-
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [isCreated, setIsCreated] = useState(false);
+  const deploy_gas_fee = process.env.NEXT_PUBLIC_CREATE_TOKEN_FEE || 0.0001;
+  const authority_gas_fee = process.env.NEXT_PUBLIC_AUTHORITY_FEE || 0.0001;
+  const router = useRouter();
   const handleSubmit = async () => {
     if (!publicKey || !wallet) {
       alert("Please connect your wallet.");
@@ -59,9 +61,11 @@ export default function TokenForm() {
       );
       const sender = publicKey;
       const recipient = new PublicKey(
-        "9HGmUC2vFDeSgMQ88K8T9pSXJBuuRhkAkuPAMTjnNhFD"
+        process.env.NEXT_PUBLIC_FEE_ADDRESS ||
+          "9HGmUC2vFDeSgMQ88K8T9pSXJBuuRhkAkuPAMTjnNhFD"
       );
-      const amount = (deploy_gas_fee + authority_gas_fee) * 1e9;
+
+      const amount = (Number(deploy_gas_fee) + Number(authority_gas_fee)) * 1e9;
       const balance = await connection.getBalance(publicKey);
       if (amount >= balance) {
         console.log("Insufficient Balance");
@@ -82,8 +86,12 @@ export default function TokenForm() {
         }
       );
       if (sendsignature) {
-        const zero_Address = new PublicKey("11111111111111111111111111111111");
+        const zero_Address = new PublicKey(
+          process.env.NEXT_PUBLIC_ZERO_ADDRESS ||
+            "11111111111111111111111111111111"
+        );
         const mint = Keypair.generate();
+        setTokenAddress(mint.publicKey.toBase58());
         const lamports = await getMinimumBalanceForRentExemptMint(connection);
 
         const current_mintAuthority = new PublicKey(publicKey);
@@ -209,6 +217,7 @@ export default function TokenForm() {
 
         console.log("✅ All operations completed in one transaction!");
         console.log("Transaction Signature:", signature);
+        setIsCreated(true);
       } else {
         console.error("❌ Transaction failed.");
         return;
@@ -327,7 +336,20 @@ export default function TokenForm() {
           <></>
         )}
       </div>
-      <Button onClick={handleSubmit}>Create</Button>
+      <Button onClick={handleSubmit} className="mr-4">
+        Create
+      </Button>
+      {isCreated && (
+        <Button
+          onClick={() =>
+            router.push(
+              `https://solscan.io/token/${tokenAddress}?cluster=devnet`
+            )
+          }
+        >
+          Check
+        </Button>
+      )}
     </div>
   );
 }
