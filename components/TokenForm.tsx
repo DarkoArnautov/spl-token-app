@@ -81,9 +81,7 @@ export default function TokenForm() {
           signers: [],
         }
       );
-      console.log("sendsignature:", sendsignature);
-      const result = await connection.getTransaction(sendsignature);
-      if (result && result.meta && result.meta.err === null) {
+      if (sendsignature) {
         const zero_Address = new PublicKey("11111111111111111111111111111111");
         const mint = Keypair.generate();
         const lamports = await getMinimumBalanceForRentExemptMint(connection);
